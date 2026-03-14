@@ -212,6 +212,8 @@ async function fetchSeries(datasetId, startTime, endTime) {
   const payload = await fetchFingridJson(`/datasets/${datasetId}/data`, {
     startTime,
     endTime,
+    pageSize: 10000,
+    oneRowPerTimePeriod: false,
   });
 
   return getCollection(payload)
@@ -221,8 +223,11 @@ async function fetchSeries(datasetId, startTime, endTime) {
 }
 
 function getIsoRange(days) {
-  const end = new Date();
-  const start = new Date(end);
+  const now = new Date();
+  // Extend end by 30 h so pre-published prices (released each evening at 21:00
+  // for the following day) are always included in the response.
+  const end = new Date(now.getTime() + 30 * 60 * 60 * 1000);
+  const start = new Date(now);
   start.setUTCDate(start.getUTCDate() - days);
 
   return {
@@ -236,6 +241,8 @@ app.get('/api/health', (_request, response) => {
 });
 
 app.get('/api/fcr-prices', async (request, response) => {
+  response.setHeader('Cache-Control', 'no-store');
+
   try {
     const requestedDays = Number(request.query.days || 7);
     const days = Number.isFinite(requestedDays) && requestedDays > 0 && requestedDays <= 31 ? requestedDays : 7;

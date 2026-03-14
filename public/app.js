@@ -4,7 +4,7 @@ const tableBody = document.querySelector('#table-body');
 const refreshButton = document.querySelector('#refresh-button');
 const daysSelect = document.querySelector('#days-select');
 
-const latestEls = {
+const summaryEls = {
   fcrN: document.querySelector('#fcrn-latest'),
   fcrDUp: document.querySelector('#fcrdup-latest'),
   fcrDDown: document.querySelector('#fcrddown-latest'),
@@ -17,10 +17,16 @@ const colors = {
 };
 
 let chart;
+let loadGeneration = 0;
+
+// How many hourly points to display per range selection.
+// Data is pre-published each evening at 21:00 for the next day,
+// so the server extends its query window forward by 30 h to capture those.
+const pointLimits = { '1': 24, '3': 72 }; // '7' has no hard limit – show everything
 
 function formatValue(value) {
   if (!Number.isFinite(value)) return '--';
-  return `${value.toFixed(2)} €/MW,h`;
+  return `${value.toFixed(2)} €/MW`;
 }
 
 function formatHour(value) {
@@ -33,14 +39,22 @@ function formatHour(value) {
   }).format(date);
 }
 
-function getLatestPoint(series) {
-  return Array.isArray(series) && series.length > 0 ? series[series.length - 1] : null;
+function getAverageValue(points) {
+  if (!Array.isArray(points) || points.length === 0) return NaN;
+
+  const values = points
+    .map((point) => Number(point.value))
+    .filter((value) => Number.isFinite(value));
+
+  if (values.length === 0) return NaN;
+  const sum = values.reduce((acc, value) => acc + value, 0);
+  return sum / values.length;
 }
 
 function updateCards(series) {
-  latestEls.fcrN.textContent = formatValue(getLatestPoint(series.fcrN)?.value ?? NaN);
-  latestEls.fcrDUp.textContent = formatValue(getLatestPoint(series.fcrDUp)?.value ?? NaN);
-  latestEls.fcrDDown.textContent = formatValue(getLatestPoint(series.fcrDDown)?.value ?? NaN);
+  summaryEls.fcrN.textContent = formatValue(getAverageValue(series.fcrN));
+  summaryEls.fcrDUp.textContent = formatValue(getAverageValue(series.fcrDUp));
+  summaryEls.fcrDDown.textContent = formatValue(getAverageValue(series.fcrDDown));
 }
 
 function buildMergedRows(series) {
@@ -126,27 +140,51 @@ function updateChart(series) {
 
 async function loadData() {
   const days = daysSelect.value;
+  const generation = ++loadGeneration;
+
   statusText.textContent = 'Loading data from the server…';
   refreshButton.disabled = true;
+  daysSelect.disabled = true;
 
   try {
-    const response = await fetch(`/api/fcr-prices?days=${days}`);
+    const response = await fetch(`/api/fcr-prices?days=${days}`, { cache: 'no-store' });
     const payload = await response.json();
+
+    // Discard stale responses from an earlier selection
+    if (generation !== loadGeneration) return;
 
     if (!response.ok) {
       throw new Error(payload.error || 'Request failed');
     }
 
-    updateCards(payload.series);
-    updateChart(payload.series);
-    updateTable(payload.series);
+    // Slice to the most-recent N points so the view always shows
+    // the newest published prices for the chosen range.
+    const limit = pointLimits[days];
+    const series = limit
+      ? {
+          fcrN: payload.series.fcrN.slice(-limit),
+          fcrDUp: payload.series.fcrDUp.slice(-limit),
+          fcrDDown: payload.series.fcrDDown.slice(-limit),
+        }
+      : payload.series;
 
-    rangeText.textContent = `${payload.range.days} days`;
+    updateCards(series);
+    updateChart(series);
+    updateTable(series);
+
+    const first = series.fcrN[0] ?? series.fcrDUp[0] ?? series.fcrDDown[0];
+    const last = series.fcrN.at(-1) ?? series.fcrDUp.at(-1) ?? series.fcrDDown.at(-1);
+    const fmt = (iso) => new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
+    const label = days === '1' ? '1 day' : `${days} days`;
+    rangeText.textContent = first ? `${label} · ${fmt(first.startTime)} – ${fmt(last.startTime)}` : label;
     statusText.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   } catch (error) {
-    statusText.textContent = error.message;
+    if (generation === loadGeneration) statusText.textContent = error.message;
   } finally {
-    refreshButton.disabled = false;
+    if (generation === loadGeneration) {
+      refreshButton.disabled = false;
+      daysSelect.disabled = false;
+    }
   }
 }
 
