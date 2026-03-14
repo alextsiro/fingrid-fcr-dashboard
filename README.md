@@ -1,4 +1,4 @@
-# Fingrid FCR dashboard
+# Fingrid Balancing Market dashboard
 
 Project handover/status note: see `HANDOVER.md`.
 
@@ -6,6 +6,15 @@ A small mobile-friendly web dashboard for these Fingrid series:
 - FCR-N hourly market prices
 - FCR-D up hourly market prices
 - FCR-D down hourly market prices
+- mFRR CM up hourly market prices
+- mFRR CM down hourly market prices
+
+## Current UI behavior
+- Default range is `1 day`
+- Range options are `1 day`, `3 days`, `7 days`
+- Summary cards show **average** prices for the currently displayed range
+- “Recent hours” sections are collapsible and hidden by default
+- Custom favicon is served from `public/favicon.svg`
 
 ## How it works
 - The browser loads a simple dashboard from `public/`
@@ -29,10 +38,13 @@ If Fingrid's dataset metadata shape changes, you can set the dataset IDs directl
 - `FINGRID_DATASET_FCR_N`
 - `FINGRID_DATASET_FCR_D_UP`
 - `FINGRID_DATASET_FCR_D_DOWN`
+- `FINGRID_DATASET_MFRR_CM_UP_PRICE`
+- `FINGRID_DATASET_MFRR_CM_DOWN_PRICE`
 
 ## API route
 The local app exposes:
-- `GET /api/fcr-prices?days=7`
+- `GET /api/fcr-prices?days=1`
+- `GET /api/mfrr-cm-prices?days=1`
 
 This route tries to:
 1. resolve the three dataset IDs from Fingrid by exact dataset name
@@ -50,6 +62,8 @@ This route tries to:
    - `FINGRID_DATASET_FCR_N` (optional)
    - `FINGRID_DATASET_FCR_D_UP` (optional)
    - `FINGRID_DATASET_FCR_D_DOWN` (optional)
+   - `FINGRID_DATASET_MFRR_CM_UP_PRICE` (optional)
+   - `FINGRID_DATASET_MFRR_CM_DOWN_PRICE` (optional)
 5. Deploy and share the Render URL.
 
 ### Railway
@@ -61,6 +75,8 @@ This route tries to:
    - `FINGRID_DATASET_FCR_N` (optional)
    - `FINGRID_DATASET_FCR_D_UP` (optional)
    - `FINGRID_DATASET_FCR_D_DOWN` (optional)
+   - `FINGRID_DATASET_MFRR_CM_UP_PRICE` (optional)
+   - `FINGRID_DATASET_MFRR_CM_DOWN_PRICE` (optional)
 5. Deploy and share the Railway URL.
 
 ### Recommended first deploy

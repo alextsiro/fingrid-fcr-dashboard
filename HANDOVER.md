@@ -3,6 +3,17 @@
 ## What has been implemented
 A mobile-first, shareable web dashboard scaffold is complete.
 
+### Latest updates (current)
+- Dashboard title and branding updated to Balancing Market wording
+- Added second dashboard block for mFRR CM prices (up/down)
+- Added new API endpoint: `GET /api/mfrr-cm-prices?days=...`
+- Range selector is now `1 / 3 / 7` days
+- Default range is `1 day` (frontend and backend)
+- Summary cards now show averages (not latest)
+- “Recent hours” views are collapsible dropdowns, hidden by default
+- Unit formatting in UI is `€/MW`
+- Added custom favicon: `public/favicon.svg`
+
 ### Backend
 - File: `server.mjs`
 - Uses Express server and serves static UI from `public/`
@@ -21,10 +32,10 @@ A mobile-first, shareable web dashboard scaffold is complete.
 ### Frontend
 - Files: `public/index.html`, `public/app.js`, `public/styles.css`
 - Responsive phone-friendly UI
-- Range selector (3/7/14/30 days)
-- Latest cards for FCR-N, FCR-D up, FCR-D down
-- Line chart using Chart.js
-- Recent rows table
+- Range selector (1/3/7 days)
+- Average cards for FCR and mFRR CM
+- Line charts using Chart.js (FCR and mFRR CM)
+- Recent hours as collapsible dropdown lists
 
 ### Deployment
 - Render config: `render.yaml`
