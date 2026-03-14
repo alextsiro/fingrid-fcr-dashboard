@@ -19,3 +19,7 @@ services:
         sync: false
       - key: FINGRID_DATASET_FCR_D_DOWN
         sync: false
+      - key: FINGRID_DATASET_MFRR_CM_UP_PRICE
+        sync: false
+      - key: FINGRID_DATASET_MFRR_CM_DOWN_PRICE
+        sync: false

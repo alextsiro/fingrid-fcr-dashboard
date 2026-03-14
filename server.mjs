@@ -15,9 +15,12 @@ const datasetNames = {
   fcrN: 'Frequency Containment Reserve for Normal operation, hourly market prices',
   fcrDUp: 'Frequency Containment Reserve for Disturbances upwards regulation, hourly market prices',
   fcrDDown: 'Frequency Containment Reserve for Disturbances downwards regulation, hourly market prices',
+  mfrrCmUpPrice: 'Balancing Capacity Market (mFRR), up, hourly market, price',
+  mfrrCmDownPrice: 'Balancing Capacity (mFRR), down, hourly market, price',
 };
 
-let datasetIdCache = null;
+let fcrDatasetIdCache = null;
+let mfrrDatasetIdCache = null;
 const responseCache = new Map();
 const inFlightResponses = new Map();
 const cacheTtlMs = 2 * 60 * 1000;
@@ -162,8 +165,8 @@ function normalizePoint(item) {
 }
 
 async function resolveDatasetIds() {
-  if (datasetIdCache) {
-    return datasetIdCache;
+  if (fcrDatasetIdCache) {
+    return fcrDatasetIdCache;
   }
 
   const configuredIds = {
@@ -173,8 +176,8 @@ async function resolveDatasetIds() {
   };
 
   if (configuredIds.fcrN && configuredIds.fcrDUp && configuredIds.fcrDDown) {
-    datasetIdCache = configuredIds;
-    return datasetIdCache;
+    fcrDatasetIdCache = configuredIds;
+    return fcrDatasetIdCache;
   }
 
   const payload = await fetchFingridJson('/datasets');
@@ -182,20 +185,23 @@ async function resolveDatasetIds() {
 
   const findIdByName = (targetName) => {
     const match = datasets.find((item) => {
-      const name = item?.name || item?.title || item?.datasetName || item?.label;
-      return name === targetName;
+      const candidates = [item?.name, item?.title, item?.datasetName, item?.label, item?.nameEn, item?.nameFi]
+        .filter(Boolean)
+        .map((value) => String(value).trim());
+
+      return candidates.includes(targetName);
     });
 
     return match?.id || match?.datasetId || match?.identifier || null;
   };
 
-  datasetIdCache = {
+  fcrDatasetIdCache = {
     fcrN: configuredIds.fcrN || findIdByName(datasetNames.fcrN),
     fcrDUp: configuredIds.fcrDUp || findIdByName(datasetNames.fcrDUp),
     fcrDDown: configuredIds.fcrDDown || findIdByName(datasetNames.fcrDDown),
   };
 
-  const unresolved = Object.entries(datasetIdCache)
+  const unresolved = Object.entries(fcrDatasetIdCache)
     .filter(([, value]) => !value)
     .map(([key]) => key);
 
@@ -205,7 +211,55 @@ async function resolveDatasetIds() {
     throw error;
   }
 
-  return datasetIdCache;
+  return fcrDatasetIdCache;
+}
+
+async function resolveMfrrCmDatasetIds() {
+  if (mfrrDatasetIdCache) {
+    return mfrrDatasetIdCache;
+  }
+
+  const configuredIds = {
+    mfrrCmUpPrice: process.env.FINGRID_DATASET_MFRR_CM_UP_PRICE,
+    mfrrCmDownPrice: process.env.FINGRID_DATASET_MFRR_CM_DOWN_PRICE,
+  };
+
+  if (configuredIds.mfrrCmUpPrice && configuredIds.mfrrCmDownPrice) {
+    mfrrDatasetIdCache = configuredIds;
+    return mfrrDatasetIdCache;
+  }
+
+  const payload = await fetchFingridJson('/datasets', { pageSize: 5000 });
+  const datasets = getCollection(payload);
+
+  const findIdByName = (targetName) => {
+    const match = datasets.find((item) => {
+      const candidates = [item?.name, item?.title, item?.datasetName, item?.label, item?.nameEn, item?.nameFi]
+        .filter(Boolean)
+        .map((value) => String(value).trim());
+
+      return candidates.includes(targetName);
+    });
+
+    return match?.id || match?.datasetId || match?.identifier || null;
+  };
+
+  mfrrDatasetIdCache = {
+    mfrrCmUpPrice: configuredIds.mfrrCmUpPrice || findIdByName(datasetNames.mfrrCmUpPrice),
+    mfrrCmDownPrice: configuredIds.mfrrCmDownPrice || findIdByName(datasetNames.mfrrCmDownPrice),
+  };
+
+  const unresolved = Object.entries(mfrrDatasetIdCache)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  if (unresolved.length > 0) {
+    const error = new Error(`Could not resolve mFRR CM dataset IDs for: ${unresolved.join(', ')}. Set FINGRID_DATASET_MFRR_CM_UP_PRICE and FINGRID_DATASET_MFRR_CM_DOWN_PRICE in .env.`);
+    error.statusCode = 500;
+    throw error;
+  }
+
+  return mfrrDatasetIdCache;
 }
 
 async function fetchSeries(datasetId, startTime, endTime) {
@@ -265,6 +319,41 @@ app.get('/api/fcr-prices', async (request, response) => {
       range: { startTime, endTime, days },
       datasetIds,
       series: { fcrN, fcrDUp, fcrDDown },
+    };
+
+    setCachedValue(requestCacheKey, payload);
+    response.json(payload);
+  } catch (error) {
+    response.status(error.statusCode || 500).json({
+      error: error.message || 'Unknown server error',
+    });
+  }
+});
+
+app.get('/api/mfrr-cm-prices', async (request, response) => {
+  response.setHeader('Cache-Control', 'no-store');
+
+  try {
+    const requestedDays = Number(request.query.days || 7);
+    const days = Number.isFinite(requestedDays) && requestedDays > 0 && requestedDays <= 31 ? requestedDays : 7;
+    const requestCacheKey = `mfrr-cm-prices:${days}`;
+    const cachedResponse = getCachedValue(requestCacheKey);
+
+    if (cachedResponse) {
+      response.json(cachedResponse);
+      return;
+    }
+
+    const { startTime, endTime } = getIsoRange(days);
+    const datasetIds = await resolveMfrrCmDatasetIds();
+
+    const upPrice = await fetchSeries(datasetIds.mfrrCmUpPrice, startTime, endTime);
+    const downPrice = await fetchSeries(datasetIds.mfrrCmDownPrice, startTime, endTime);
+
+    const payload = {
+      range: { startTime, endTime, days },
+      datasetIds,
+      series: { upPrice, downPrice },
     };
 
     setCachedValue(requestCacheKey, payload);

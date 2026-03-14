@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fingrid FCR Prices</title>
+    <title>Fingrid Balancing Market Prices</title>
     <link rel="stylesheet" href="/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" defer></script>
     <script src="/app.js" defer></script>
@@ -12,9 +12,9 @@
     <main class="page-shell">
       <section class="hero-card">
         <p class="eyebrow">Shared mobile dashboard</p>
-        <h1>Fingrid FCR hourly market prices</h1>
+        <h1>Fingrid Balancing Market Prices</h1>
         <p class="hero-copy">
-          Track hourly market prices for FCR-N, FCR-D up, and FCR-D down in one phone-friendly view.
+          Track hourly market prices for Balancing Markets in one phone-friendly view.
         </p>
         <div class="toolbar">
           <label class="field-label" for="days-select">Range</label>
@@ -46,7 +46,7 @@
       <section class="chart-card">
         <div class="card-heading">
           <div>
-            <p class="eyebrow">Trend</p>
+            <p class="eyebrow">FCR TREND</p>
             <h2>Hourly prices</h2>
           </div>
           <span id="range-text" class="range-text"></span>
@@ -61,19 +61,50 @@
             <h2>Latest values</h2>
           </div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Hour</th>
-                <th>FCR-N</th>
-                <th>FCR-D up</th>
-                <th>FCR-D down</th>
-              </tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-          </table>
+        <details class="recent-dropdown">
+          <summary id="recent-hours-summary">Recent hours (24)</summary>
+          <ul id="recent-hours-list" class="recent-hours-list"></ul>
+        </details>
+      </section>
+
+      <section class="hero-card">
+        <p class="eyebrow">mFRR CM prices</p>
+        <h2>mFRR CM prices</h2>
+      </section>
+
+      <section class="stats-grid stats-grid-2" id="mfrr-stats-grid">
+        <article class="stat-card accent-purple">
+          <span class="stat-label">mFRR CM up average</span>
+          <strong id="mfrr-up-average">--</strong>
+        </article>
+        <article class="stat-card accent-teal">
+          <span class="stat-label">mFRR CM down average</span>
+          <strong id="mfrr-down-average">--</strong>
+        </article>
+      </section>
+
+      <section class="chart-card">
+        <div class="card-heading">
+          <div>
+            <p class="eyebrow">mFRR CM trend</p>
+            <h2>Hourly prices</h2>
+          </div>
+          <span id="mfrr-range-text" class="range-text"></span>
         </div>
+        <canvas id="mfrr-price-chart"></canvas>
+      </section>
+
+      <section class="table-card">
+        <div class="card-heading">
+          <div>
+            <p class="eyebrow">mFRR CM recent hours</p>
+            <h2>Latest values</h2>
+          </div>
+        </div>
+        <details class="recent-dropdown">
+          <summary id="mfrr-recent-hours-summary">Recent hours (24)</summary>
+          <ul id="mfrr-recent-hours-list" class="recent-hours-list"></ul>
+        </details>
       </section>
     </main>
   </body>
