@@ -298,8 +298,8 @@ app.get('/api/fcr-prices', async (request, response) => {
   response.setHeader('Cache-Control', 'no-store');
 
   try {
-    const requestedDays = Number(request.query.days || 7);
-    const days = Number.isFinite(requestedDays) && requestedDays > 0 && requestedDays <= 31 ? requestedDays : 7;
+    const requestedDays = Number(request.query.days || 1);
+    const days = Number.isFinite(requestedDays) && requestedDays > 0 && requestedDays <= 31 ? requestedDays : 1;
     const requestCacheKey = `fcr-prices:${days}`;
     const cachedResponse = getCachedValue(requestCacheKey);
 
@@ -334,8 +334,8 @@ app.get('/api/mfrr-cm-prices', async (request, response) => {
   response.setHeader('Cache-Control', 'no-store');
 
   try {
-    const requestedDays = Number(request.query.days || 7);
-    const days = Number.isFinite(requestedDays) && requestedDays > 0 && requestedDays <= 31 ? requestedDays : 7;
+    const requestedDays = Number(request.query.days || 1);
+    const days = Number.isFinite(requestedDays) && requestedDays > 0 && requestedDays <= 31 ? requestedDays : 1;
     const requestCacheKey = `mfrr-cm-prices:${days}`;
     const cachedResponse = getCachedValue(requestCacheKey);
 
